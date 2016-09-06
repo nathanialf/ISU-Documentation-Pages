@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> ISU Live Documentation </title>
+    <link rel="stylesheet" type="text/css" href="../css/nf.css">
+    <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h1>Legacy ISU Live (Televisions installed before March 2016)</h1>
+    <p>ISU Live is a digital signage system running on Linux / OpenGL that displays TV (via an analog video capture card), video (through videos uploaded via its web back-end interface), news (via up to two scrolling regions, both vertical[newsbox] and horizontal[ticker]) and the time and weather. There are two display modes, one for video+ticker and the default which displays everything</p>
+    <hr>
+    <h2>Minimum System Requirements</h2>
+    <ul>
+      <li>Dual Core CPU running at 1.8GHz (Prefer 64-bit)</li>
+      <li>AMD Radeon 5450 or Intel i5/i7 Integrated Grpahics</li>
+      <li>PCI TV Tuner (SABRENT TV-PCIRC -TV is preferred but they are hard to find)</li>
+      <li>2GB of Memory</li>
+      <li>250GB HDD</li>
+      <li>DVD Player</li>
+      <li>Network Connectivity</li>
+    </ul>
+    <hr>
+    <h2>Installing and Configuring</h2>
+    1. First thing you will want to do is burn a Slackware64 14.0 iso to a USB Drive or DVD.<br>
+    2. Boot the machine to the USB or DVD.<br>
+    3. It will ask you for the kernal location: press Enter<br>
+    4. It will ask you for the keyboard configuration: press Enter<br>
+    5. You will be at terminal now. Login with root no password<br>
+    6. Enter the following commands<br>
+    <div class="code">
+      ifconfig eth0 139.102.56.140/24<br>
+      route add default gw 139.102.56.1
+      <div class="caption">
+	This will setup the IP Address of the machine.<br>NOTE: XXX is the subnet of the building you are located in; YYY is the individual machine that you should make sure is already not in use. You can check this by pinging it from a different machine. ISU Live will only export to the IP Address listed above. When you set up networking again, set it up for the bootp of the machine
+      </div>
+    </div>
+    <div class="code">
+      rpc.portmap<br>
+      rpc.statd<br>
+      mkdir /net<br>
+      mount 139.102.21.101:/net/ISULive /net
+      <div class="caption">
+	This will start NFS and mount the ISULive export from tera.indstate.edu
+      </div>
+    </div>
+    <div class="code">
+      fdisk /dev/sda
+      </div>
+	&nbsp;&nbsp;&nbsp;a. Once running fdisk, you will delete all partitions, make one new partition, make it active and then write the partition table.
+      <div class="code">
+      p // prints partitions<br>
+      d // deletes a partition - you will need to do this for as many partitions as you have<br>
+      n // creates a new partition - go with the default for everything<br>
+      a // makes that partition bootable<br>
+      w // writes partition table changes
+    </div>
+    <div class="code">
+      mke2fs -i 32768 -t ext3 /dev/sda1<br>
+      mount /dev/sda1 /mnt
+      <div class="caption">
+	This will build the file system on the partition and mount it
+      </div>
+    </div>
+    <div class="code">
+      cd /mnt<br>
+      /bin/tar-1.13 xvplzf /net/64.tgz<br>
+      lilo -r /mnt
+      <div class="caption">
+	This will install the image and run Lilo
+      </div>
+    </div>
+    <div class="code">
+      cd /<br>
+      umount /mnt /net<br>
+      reboot
+      <div class="caption">
+	This unmounts the image export and the partition that we installed ISULive on
+      </div>
+    </div>
+    7. You will need to pay attention while it is booting up to select debug mode otherwise you won't be able to make sure everything is set up properly. If you miss it just restart it again.<br>
+    8. Login as root, the password is 'isk402is'<br>
+    9. Now that you are logged in, open up a terminal and do the following
+    <div class="code">
+      glxinfo | less
+      <div class="caption">
+	You need to make sure 'direct rendering' is set to yes. If it is not by default, switch it to a new graphics card.
+      </div>
+    </div>
+    10. You will need to make sure the machine is bootp'd (ask someone if you don't know what that is) so you have a static IP for the location that it will be. If you already have the IP, don't worry about getting it. It will not be the same as the one you used when setting up the image.<br>
+    11. After you get the IP edit /etc/rc.d/rc.inet1.conf to the following:
+    <div class="code">
+      IPADDR[0]="139.102.XXX.YYY"<br>
+      NETMASK[0]="255.255.0.0"<br>
+      USE_DHCP[0]="yes"<br>
+      ...<br>
+      GATEWAY="139.102.XXX.1"
+      <div class="caption">
+	The XXX and YYY are the IP address that is for the location of the machine
+      </div>
+    </div>
+    11. Go into /lib/modprobe.d and edit saa7134.conf so that:
+    <div class="code">
+      //If it is a Kworld PlusTV Analog Lite PCI Card<br>
+      options saa7134 card=59 tuner=56<br><br>
+      //If it is a Sabrent TC-PCIRC Card<br>
+      options saa7134 card=126 tuner=38
+    </div>
+    12. Edit /usr/live/live.conf so that:
+    <div class="code">
+      //Make sure that ...<br>
+      enable_capture =  1<br><br>
+      //Just below the 'font_dpi' add<br>
+      video_dev = "/dev/video0"<br>
+      vbi_dev = "/dev/vbi0"<br>
+    </div>
+    13. Now all you have to do is link files together:
+    <div class="code">
+      cd /usr/live<br>
+      ln -sf /usr/live/conf/1080p.conf live.conf<br>
+      ./live 
+    </div>
+    14. Once you have verified it works, reboot and let it start up on its own.
+    <hr>
+    <h3>Updating Content</h3>
+    1. Enter the IP Address of the ISU Live machine that you are updating<br>
+    2. On the webpage, it will ask you for a username and password:
+    <div class="code">
+	Username: rss<br>
+	Password: rss
+    </div>
+    <hr>
+    <h3>Finding IP Address</h3>
+	1. Open a terminal
+	<div class="code">ifconfig</div>
+	3. On the second line of "eth0", following 'inet' is the IP Address of the machine
+  </body>
+</html>

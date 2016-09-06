@@ -1,0 +1,4 @@
+AuthType Basic
+AuthName "Password Protected Area"
+AuthUserFile /net/home/nfine1/public_html/docs/ISULive/.htpasswd
+require valid-user
